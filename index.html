@@ -443,15 +443,19 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // COLOQUE AQUI os dados do seu projeto Supabase. Eles são obtidos em Project Settings > API.
-const SUPABASE_URL = "https://qipteknzhcogxtfygrov.supabase.co/rest/v1/";
+const SUPABASE_URL = "https://qipteknzhcogxtfygrov.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_T18vU-1kFuj4-LHGtvT8KQ_cFojebMh";
 
-const supabaseClient = (SUPABASE_URL.startsWith("http") &&
-  SUPABASE_PUBLISHABLE_KEY &&
-  !SUPABASE_PUBLISHABLE_KEY.includes("ssb_publishable_T18vU-1kFuj4-LHGtvT8KQ_cFojebMh"))
-  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: true, autoRefreshToken: true } })
-  : null;
-
+const supabaseClient = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY,
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true
+    }
+  }
+);
 const STORAGE_ESTOQUE = 'estoque:itens';
 const STORAGE_EVENTOS = 'eventos:lista';
 
