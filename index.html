@@ -451,7 +451,7 @@ const supabaseClient = window.supabase.createClient(
   SUPABASE_PUBLISHABLE_KEY,
   {
     auth: {
-      persistSession: true,
+      persistSession: false,
       autoRefreshToken: true
     }
   }
