@@ -222,6 +222,20 @@
     font-size:16px;
   }
 
+  .auth-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;z-index:9999;}
+  .auth-card{width:min(430px,100%);background:#fff;border:1px solid var(--line);border-radius:14px;padding:28px;box-shadow:0 12px 40px rgba(0,0,0,.08);}
+  .auth-card h2{margin:0 0 6px;font-size:22px;}
+  .auth-card p{margin:0 0 18px;color:var(--muted);font-size:13px;line-height:1.5;}
+  .auth-card .field{margin-bottom:12px;min-width:0;}
+  .auth-card input{width:100%;}
+  .auth-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+  .auth-status{font-size:12px;color:var(--muted);min-height:18px;margin-top:10px;}
+  .auth-status.error{color:var(--danger);}
+  .auth-status.ok{color:var(--accent);}
+  .user-bar{display:flex;align-items:center;gap:8px;margin-left:auto;padding-bottom:10px;font-size:12px;color:var(--muted);}
+  .user-email{max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cloud-badge{display:inline-block;padding:3px 8px;border-radius:99px;background:#e8f2ed;color:var(--accent);font-weight:600;font-size:11px;}
+  @media(max-width:700px){.user-bar{width:100%;margin-left:0}.item-select-row{grid-template-columns:26px 1fr 70px 0}.event-item{align-items:flex-start;gap:10px;flex-direction:column}.event-item .actions{width:100%;}}
   @media print{
     nav, header, .no-print, #view-financeiro,
     #view-estoque, #view-eventos,
@@ -245,6 +259,26 @@
 </head>
 <body>
 
+<div class="auth-screen" id="auth-screen">
+  <div class="auth-card">
+    <h2>Checklist de Eventos</h2>
+    <p>Acesse sua conta para manter estoque, eventos e financeiro sincronizados na nuvem em qualquer aparelho.</p>
+    <div class="field">
+      <label for="auth-email">E-mail</label>
+      <input id="auth-email" type="email" autocomplete="email" placeholder="seu@email.com">
+    </div>
+    <div class="field">
+      <label for="auth-password">Senha</label>
+      <input id="auth-password" type="password" autocomplete="current-password" placeholder="Mínimo recomendado: 8 caracteres">
+    </div>
+    <div class="auth-actions">
+      <button class="primary" id="btn-login">Entrar</button>
+      <button class="ghost" id="btn-signup">Criar conta</button>
+    </div>
+    <div class="auth-status" id="auth-status"></div>
+  </div>
+</div>
+
 <header class="no-print">
   <h1>Checklist de equipamentos</h1>
   <p>Cadastre seu estoque de som e iluminação e monte a lista de cada evento para imprimir.</p>
@@ -258,9 +292,13 @@
     <button data-view="financeiro">Financeiro</button>
   </div>
   <div style="display:flex;align-items:center;gap:8px;padding-bottom:10px;">
+    <span class="cloud-badge">☁ Nuvem</span>
     <button class="ghost" id="btn-backup">Baixar backup</button>
     <button class="ghost" id="btn-restaurar">Restaurar backup</button>
+    <button class="ghost" id="btn-migrar">Migrar dados locais</button>
+    <button class="ghost" id="btn-logout">Sair</button>
     <input type="file" id="input-restaurar" accept="application/json" style="display:none;">
+    <span class="user-email" id="user-email"></span>
   </div>
 </nav>
 
@@ -402,7 +440,18 @@
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+// COLOQUE AQUI os dados do seu projeto Supabase. Eles são obtidos em Project Settings > API.
+const SUPABASE_URL = "https://qipteknzhcogxtfygrov.supabase.co/rest/v1/";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_T18vU-1kFuj4-LHGtvT8KQ_cFojebMh";
+
+const supabaseClient = (SUPABASE_URL.startsWith("http") &&
+  SUPABASE_PUBLISHABLE_KEY &&
+  !SUPABASE_PUBLISHABLE_KEY.includes("ssb_publishable_T18vU-1kFuj4-LHGtvT8KQ_cFojebMh"))
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: true, autoRefreshToken: true } })
+  : null;
+
 const STORAGE_ESTOQUE = 'estoque:itens';
 const STORAGE_EVENTOS = 'eventos:lista';
 
@@ -420,32 +469,111 @@ function toast(msg){
 
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
-function loadData(){
-  try{
-    const r = localStorage.getItem(STORAGE_ESTOQUE);
-    estoque = r ? JSON.parse(r) : [];
-  }catch(e){ estoque = []; }
-  try{
-    const r2 = localStorage.getItem(STORAGE_EVENTOS);
-    eventos = r2 ? JSON.parse(r2) : [];
-  }catch(e){ eventos = []; }
-  eventos = eventos.map(ev => ({
-    ...ev,
-    valor: numericEventValue(ev.valor),
-    itens: ev.itens || {}
-  }));
+async function getUser(){
+  if(!supabaseClient) return null;
+  const { data } = await supabaseClient.auth.getUser();
+  return data?.user || null;
+}
+
+async function loadData(){
+  if(!supabaseClient){
+    setAuthStatus('Configure SUPABASE_URL e SUPABASE_PUBLISHABLE_KEY no arquivo antes de publicar.', true);
+    return;
+  }
+  const user = await getUser();
+  if(!user) return;
+
+  const [er, vr] = await Promise.all([
+    supabaseClient.from('estoque').select('*').order('created_at', {ascending:true}),
+    supabaseClient.from('eventos').select('*').order('data', {ascending:true})
+  ]);
+  if(er.error || vr.error){
+    console.error(er.error || vr.error);
+    toast('Erro ao carregar dados da nuvem. Confira as tabelas/RLS.');
+    return;
+  }
+  estoque = (er.data || []).map(x => ({id:x.id, nome:x.nome, categoria:x.categoria, qtd:x.qtd}));
+  eventos = (vr.data || []).map(x => ({id:x.id, nome:x.nome, cliente:x.cliente || '', data:x.data || '', local:x.local || '', valor:numericEventValue(x.valor), itens:x.itens || {}}));
   renderEstoque();
   renderEventos();
   renderSelectEventos();
   renderFinanceiro();
 }
 
-function saveEstoque(){
-  localStorage.setItem(STORAGE_ESTOQUE, JSON.stringify(estoque));
+async function saveEstoque(){
+  const user = await getUser();
+  if(!user) throw new Error('Usuário não autenticado');
+  const rows = estoque.map(item => ({id:item.id, user_id:user.id, nome:item.nome, categoria:item.categoria, qtd:item.qtd}));
+  const {error} = await supabaseClient.from('estoque').upsert(rows, {onConflict:'id'});
+  if(error){ console.error(error); toast('Não foi possível salvar o estoque.'); throw error; }
 }
-function saveEventos(){
-  localStorage.setItem(STORAGE_EVENTOS, JSON.stringify(eventos));
+
+async function saveEventos(){
+  const user = await getUser();
+  if(!user) throw new Error('Usuário não autenticado');
+  const rows = eventos.map(ev => ({id:ev.id, user_id:user.id, nome:ev.nome, cliente:ev.cliente || '', data:ev.data || null, local:ev.local || '', valor:numericEventValue(ev.valor), itens:ev.itens || {}}));
+  const {error} = await supabaseClient.from('eventos').upsert(rows, {onConflict:'id'});
+  if(error){ console.error(error); toast('Não foi possível salvar os eventos.'); throw error; }
 }
+
+async function deleteEstoque(id){
+  const {error} = await supabaseClient.from('estoque').delete().eq('id', id);
+  if(error){ console.error(error); toast('Erro ao remover item.'); throw error; }
+}
+
+async function deleteEvento(id){
+  const {error} = await supabaseClient.from('eventos').delete().eq('id', id);
+  if(error){ console.error(error); toast('Erro ao remover evento.'); throw error; }
+}
+
+function setAuthStatus(msg, error=false){
+  const el=document.getElementById('auth-status');
+  if(!el) return;
+  el.textContent=msg||'';
+  el.className='auth-status'+(error?' error':' ok');
+}
+
+async function handleLogin(){
+  if(!supabaseClient){setAuthStatus('Configure o Supabase no arquivo.', true);return;}
+  const email=document.getElementById('auth-email').value.trim();
+  const password=document.getElementById('auth-password').value;
+  if(!email || !password){setAuthStatus('Informe e-mail e senha.', true);return;}
+  setAuthStatus('Entrando...');
+  const {error}=await supabaseClient.auth.signInWithPassword({email,password});
+  if(error){setAuthStatus(error.message, true);return;}
+  setAuthStatus('Login realizado.');
+  await startApp();
+}
+
+async function handleSignup(){
+  if(!supabaseClient){setAuthStatus('Configure o Supabase no arquivo.', true);return;}
+  const email=document.getElementById('auth-email').value.trim();
+  const password=document.getElementById('auth-password').value;
+  if(!email || !password){setAuthStatus('Informe e-mail e senha.', true);return;}
+  if(password.length < 6){setAuthStatus('A senha precisa ter pelo menos 6 caracteres.', true);return;}
+  setAuthStatus('Criando conta...');
+  const {data,error}=await supabaseClient.auth.signUp({email,password});
+  if(error){setAuthStatus(error.message, true);return;}
+  if(data.session){
+    setAuthStatus('Conta criada. Entrando...');
+    await startApp();
+  }else{
+    setAuthStatus('Conta criada. Verifique o e-mail para confirmar e depois entre.');
+  }
+}
+
+async function startApp(){
+  const user=await getUser();
+  if(!user) return;
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('user-email').textContent=user.email || '';
+  await loadData();
+}
+
+document.getElementById('btn-login').addEventListener('click', handleLogin);
+document.getElementById('btn-signup').addEventListener('click', handleSignup);
+document.getElementById('auth-password').addEventListener('keydown', e=>{if(e.key==='Enter') handleLogin();});
+document.getElementById('btn-logout').addEventListener('click', async ()=>{await supabaseClient.auth.signOut(); location.reload();});
 
 // ---------- Navegação ----------
 document.querySelectorAll('nav button').forEach(btn=>{
@@ -474,8 +602,9 @@ function renderEstoque(){
   });
   tbody.querySelectorAll('button.link-danger').forEach(b=>{
     b.addEventListener('click', async ()=>{
-      estoque = estoque.filter(i=>i.id !== b.dataset.id);
-      await saveEstoque();
+      const id=b.dataset.id;
+      await deleteEstoque(id);
+      estoque = estoque.filter(i=>i.id !== id);
       renderEstoque();
     });
   });
@@ -517,8 +646,9 @@ function renderEventos(){
   });
   list.querySelectorAll('button[data-action="remover"]').forEach(b=>{
     b.addEventListener('click', async ()=>{
-      eventos = eventos.filter(e=>e.id !== b.dataset.id);
-      await saveEventos();
+      const id=b.dataset.id;
+      await deleteEvento(id);
+      eventos = eventos.filter(e=>e.id !== id);
       renderEventos();
       renderSelectEventos();
       renderFinanceiro();
@@ -730,6 +860,24 @@ function buildPrintTable(ev){
   // esconde os controles interativos apenas na impressão via classe no-print já existente
 }
 
+// ---------- Migração local -> nuvem ----------
+document.getElementById('btn-migrar').addEventListener('click', async ()=>{
+  const localEstoque=JSON.parse(localStorage.getItem('estoque:itens') || '[]');
+  const localEventos=JSON.parse(localStorage.getItem('eventos:lista') || '[]');
+  if(!localEstoque.length && !localEventos.length){ toast('Não há dados locais para migrar.'); return; }
+  if(!confirm(`Migrar ${localEstoque.length} itens e ${localEventos.length} eventos para a nuvem?`)) return;
+  try{
+    const user=await getUser();
+    if(!user) throw new Error('Faça login primeiro.');
+    estoque=localEstoque;
+    eventos=localEventos.map(ev=>({...ev,valor:numericEventValue(ev.valor),itens:ev.itens||{}}));
+    await saveEstoque();
+    await saveEventos();
+    renderEstoque(); renderEventos(); renderSelectEventos(); renderFinanceiro();
+    toast('Dados locais migrados para a nuvem.');
+  }catch(e){ console.error(e); toast('Falha na migração.'); }
+});
+
 // ---------- Backup / Restaurar ----------
 document.getElementById('btn-backup').addEventListener('click', ()=>{
   const dados = {
@@ -758,7 +906,7 @@ document.getElementById('input-restaurar').addEventListener('change', (e)=>{
   const file = e.target.files[0];
   if(!file) return;
   const reader = new FileReader();
-  reader.onload = (evt)=>{
+  reader.onload = async (evt)=>{
     try{
       const dados = JSON.parse(evt.target.result);
       if(!Array.isArray(dados.estoque) || !Array.isArray(dados.eventos)){
@@ -767,10 +915,16 @@ document.getElementById('input-restaurar').addEventListener('change', (e)=>{
       }
       const confirmar = confirm('Isso vai substituir os dados atuais pelos dados do backup. Continuar?');
       if(!confirmar) return;
-      estoque = dados.estoque;
-      eventos = dados.eventos;
-      saveEstoque();
-      saveEventos();
+      estoque = dados.estoque || [];
+      eventos = (dados.eventos || []).map(ev=>({...ev,valor:numericEventValue(ev.valor),itens:ev.itens||{}}));
+      const user=await getUser();
+      if(!user) throw new Error('Faça login primeiro.');
+      const {error:e1}=await supabaseClient.from('estoque').delete().neq('id','__none__');
+      if(e1) throw e1;
+      const {error:e2}=await supabaseClient.from('eventos').delete().neq('id','__none__');
+      if(e2) throw e2;
+      if(estoque.length) await saveEstoque();
+      if(eventos.length) await saveEventos();
       renderEstoque();
       renderEventos();
       renderSelectEventos();
@@ -784,7 +938,12 @@ document.getElementById('input-restaurar').addEventListener('change', (e)=>{
   e.target.value = '';
 });
 
-loadData();
+if(supabaseClient){
+  supabaseClient.auth.onAuthStateChange((_event, _session)=>{
+    if(_session) startApp();
+  });
+}
+startApp();
 </script>
 
 </body>
