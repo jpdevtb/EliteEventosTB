@@ -3,6 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <title>Elite Eventos - Gestão de Equipamentos</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a2540">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Elite Eventos">
 <style>
   :root{
     --bg:#f2f4f7;
@@ -329,7 +337,7 @@
 <div class="auth-screen" id="auth-screen">
   <img class="auth-logo app-logo" alt="Elite Eventos">
   <div class="auth-card">
-    <h2>Elite Eventos - Gestão de Equipamentos</h2>
+    <h2>Checklist de Eventos</h2>
     <p>Acesse sua conta para manter estoque, eventos e financeiro sincronizados na nuvem em qualquer aparelho.</p>
     <div class="field" id="campo-username">
       <label for="auth-username">Nome de usuário <span style="font-weight:400;color:var(--muted);">(só para criar conta)</span></label>
@@ -366,8 +374,7 @@
   <img class="logo app-logo" alt="Elite Eventos">
   <div class="header-text">
     <h1>Elite Eventos - Gestão de Equipamentos</h1>
-    <p>Cadastre os equipamentos de som e iluminação e monte a lista de cada evento.</p>
-    <p>Criado por GhostDeV.</p>
+    <p>Cadastre seus equipamentos de som e iluminação e monte a lista de cada evento.</p>
   </div>
 </header>
 
@@ -1243,6 +1250,12 @@ if(supabaseClient){
   });
 }
 startApp();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('service-worker.js').catch(()=>{});
+  });
+}
 </script>
 
 </body>
