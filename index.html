@@ -18,6 +18,11 @@
     --cat-luz:#c47f16;
     --cat-estrutura:#3c4a6b;
     --cat-outros:#5f5a52;
+    --tipo-casamento:#a3457a;
+    --tipo-aniversario:#c47f16;
+    --tipo-som_ao_vivo:#1789c9;
+    --tipo-balada:#6a3fc4;
+    --tipo-outro:#5f5a52;
   }
   *{box-sizing:border-box;}
   body{
@@ -187,6 +192,27 @@
   .tag.luz{background:var(--cat-luz);}
   .tag.estrutura{background:var(--cat-estrutura);}
   .tag.outros{background:var(--cat-outros);}
+  .tag.casamento{background:var(--tipo-casamento);}
+  .tag.aniversario{background:var(--tipo-aniversario);}
+  .tag.som_ao_vivo{background:var(--tipo-som_ao_vivo);}
+  .tag.balada{background:var(--tipo-balada);}
+  .tag.outro{background:var(--tipo-outro);}
+  .filtro-tipos{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+  .filtro-tipos button{
+    border:1px solid var(--line);
+    background:#fff;
+    color:var(--muted);
+    padding:6px 13px;
+    border-radius:99px;
+    font-size:12px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .filtro-tipos button.active{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#fff;
+  }
   .empty{
     color:var(--muted);
     font-size:14px;
@@ -271,6 +297,11 @@
   .status-badge{display:inline-block;padding:2px 9px;border-radius:99px;font-weight:600;font-size:11px;}
   .status-badge.aprovado{background:#e1f3e6;color:#1e7a3d;}
   .status-badge.pendente{background:#fdeee1;color:#b5590e;}
+  .status-badge.orcamento{background:#eef0f3;color:#5a6270;}
+  .status-badge.confirmado{background:#e2eefb;color:#1789c9;}
+  .status-badge.concluido{background:#e1f3e6;color:#1e7a3d;}
+  .status-badge.cancelado{background:#fbe4e1;color:#b5301e;}
+  select.status-select{font-size:12px;padding:5px 8px;border-radius:8px;}
   @media(max-width:700px){.user-bar{width:100%;margin-left:0}.item-select-row{grid-template-columns:26px 1fr 70px 0}.event-item{align-items:flex-start;gap:10px;flex-direction:column}.event-item .actions{width:100%;}}
   @media print{
     nav, header, .no-print, #view-financeiro, #view-usuarios,
@@ -421,8 +452,31 @@
           <input id="ev-local" type="text" placeholder="Local">
         </div>
         <div class="field" style="max-width:170px;">
+          <label for="ev-tipo">Tipo de evento</label>
+          <select id="ev-tipo">
+            <option value="casamento">Casamento</option>
+            <option value="aniversario">Festa de aniversário</option>
+            <option value="som_ao_vivo">Som ao vivo</option>
+            <option value="balada">Balada</option>
+            <option value="outro">Outro</option>
+          </select>
+        </div>
+        <div class="field" style="min-width:200px;">
+          <label for="ev-estilo">Estilos musicais desejados</label>
+          <input id="ev-estilo" type="text" placeholder="Ex: sertanejo, funk, pagode...">
+        </div>
+        <div class="field" style="max-width:170px;">
           <label for="ev-valor">Valor do evento (R$)</label>
           <input id="ev-valor" type="number" min="0" step="0.01" placeholder="0,00">
+        </div>
+        <div class="field" style="max-width:150px;">
+          <label for="ev-status">Status</label>
+          <select id="ev-status">
+            <option value="orcamento">Orçamento</option>
+            <option value="confirmado">Confirmado</option>
+            <option value="concluido">Concluído</option>
+            <option value="cancelado">Cancelado</option>
+          </select>
         </div>
         <button class="primary" id="btn-add-evento">Criar evento</button>
       </div>
@@ -430,6 +484,14 @@
 
     <div class="card">
       <h2>Eventos cadastrados</h2>
+      <div class="filtro-tipos no-print" id="filtro-tipos">
+        <button data-tipo="todos" class="active">Todos</button>
+        <button data-tipo="casamento">Casamentos</button>
+        <button data-tipo="aniversario">Aniversários</button>
+        <button data-tipo="som_ao_vivo">Som ao vivo</button>
+        <button data-tipo="balada">Baladas</button>
+        <button data-tipo="outro">Outros</button>
+      </div>
       <div class="event-list" id="lista-eventos"></div>
       <div class="empty" id="eventos-empty" style="display:none;">Nenhum evento cadastrado ainda.</div>
     </div>
@@ -478,13 +540,14 @@
             <th>Cliente</th>
             <th>Data</th>
             <th>Local</th>
+            <th>Status</th>
             <th>Valor</th>
           </tr>
         </thead>
         <tbody></tbody>
         <tfoot>
           <tr>
-            <th colspan="4" style="text-align:right;">TOTAL</th>
+            <th colspan="5" style="text-align:right;">TOTAL (confirmados + concluídos)</th>
             <th id="financeiro-total">R$ 0,00</th>
           </tr>
         </tfoot>
@@ -575,7 +638,7 @@ async function loadData(){
     return;
   }
   estoque = (er.data || []).map(x => ({id:x.id, nome:x.nome, categoria:x.categoria, qtd:x.qtd}));
-  eventos = (vr.data || []).map(x => ({id:x.id, nome:x.nome, cliente:x.cliente || '', data:x.data || '', local:x.local || '', valor:numericEventValue(x.valor), itens:x.itens || {}}));
+  eventos = (vr.data || []).map(x => ({id:x.id, nome:x.nome, cliente:x.cliente || '', data:x.data || '', local:x.local || '', valor:numericEventValue(x.valor), status:x.status || 'orcamento', tipo:x.tipo_evento || 'outro', estiloMusical:x.estilo_musical || '', itens:x.itens || {}}));
   renderEstoque();
   renderEventos();
   renderSelectEventos();
@@ -593,7 +656,7 @@ async function saveEstoque(){
 async function saveEventos(){
   const user = await getUser();
   if(!user) throw new Error('Usuário não autenticado');
-  const rows = eventos.map(ev => ({id:ev.id, user_id:user.id, nome:ev.nome, cliente:ev.cliente || '', data:ev.data || null, local:ev.local || '', valor:numericEventValue(ev.valor), itens:ev.itens || {}}));
+  const rows = eventos.map(ev => ({id:ev.id, user_id:user.id, nome:ev.nome, cliente:ev.cliente || '', data:ev.data || null, local:ev.local || '', valor:numericEventValue(ev.valor), status:ev.status || 'orcamento', tipo_evento:ev.tipo || 'outro', estilo_musical:ev.estiloMusical || '', itens:ev.itens || {}}));
   const {error} = await supabaseClient.from('eventos').upsert(rows, {onConflict:'id'});
   if(error){ console.error(error); toast('Não foi possível salvar os eventos.'); throw error; }
 }
@@ -752,24 +815,52 @@ document.getElementById('btn-add-item').addEventListener('click', async ()=>{
 });
 
 // ---------- Eventos ----------
+const statusLabel = {orcamento:'Orçamento', confirmado:'Confirmado', concluido:'Concluído', cancelado:'Cancelado'};
+const tipoLabel = {casamento:'Casamento', aniversario:'Aniversário', som_ao_vivo:'Som ao vivo', balada:'Balada', outro:'Outro'};
+let filtroTipoAtual = 'todos';
+
 function renderEventos(){
   const list = document.getElementById('lista-eventos');
   list.innerHTML = '';
-  document.getElementById('eventos-empty').style.display = eventos.length ? 'none' : 'block';
-  eventos.forEach(ev=>{
+  const eventosFiltrados = filtroTipoAtual === 'todos'
+    ? eventos
+    : eventos.filter(ev => (ev.tipo || 'outro') === filtroTipoAtual);
+
+  document.getElementById('eventos-empty').style.display = eventosFiltrados.length ? 'none' : 'block';
+  eventosFiltrados.forEach(ev=>{
     const div = document.createElement('div');
     div.className = 'event-item';
     div.innerHTML = `
       <div class="info">
         <b>${ev.nome}</b>
+        <span class="tag ${ev.tipo || 'outro'}">${tipoLabel[ev.tipo] || 'Outro'}</span>
+        <span class="status-badge ${ev.status || 'orcamento'}">${statusLabel[ev.status] || 'Orçamento'}</span>
         <div>${ev.cliente || 'Sem cliente'} ${ev.data ? '· '+formatDate(ev.data) : ''} ${ev.local ? '· '+ev.local : ''} ${formatCurrency(ev.valor) ? '· '+formatCurrency(ev.valor) : ''}</div>
+        ${ev.estiloMusical ? `<div style="margin-top:2px;">🎵 ${ev.estiloMusical}</div>` : ''}
       </div>
       <div class="actions">
+        <select class="status-select no-print" data-id="${ev.id}">
+          <option value="orcamento" ${ev.status==='orcamento'?'selected':''}>Orçamento</option>
+          <option value="confirmado" ${ev.status==='confirmado'?'selected':''}>Confirmado</option>
+          <option value="concluido" ${ev.status==='concluido'?'selected':''}>Concluído</option>
+          <option value="cancelado" ${ev.status==='cancelado'?'selected':''}>Cancelado</option>
+        </select>
         <button class="ghost" data-id="${ev.id}" data-action="montar">Montar lista</button>
         <button class="link-danger" data-id="${ev.id}" data-action="remover">Remover</button>
       </div>
     `;
     list.appendChild(div);
+  });
+  list.querySelectorAll('select.status-select').forEach(sel=>{
+    sel.addEventListener('change', async ()=>{
+      const ev = eventos.find(e=>e.id === sel.dataset.id);
+      if(!ev) return;
+      ev.status = sel.value;
+      await saveEventos();
+      renderEventos();
+      renderFinanceiro();
+      toast('Status atualizado');
+    });
   });
   list.querySelectorAll('button[data-action="remover"]').forEach(b=>{
     b.addEventListener('click', async ()=>{
@@ -822,14 +913,17 @@ function renderFinanceiro(){
     .sort((a,b) => (a.data || '').localeCompare(b.data || ''))
     .forEach(ev => {
       const valor = numericEventValue(ev.valor);
-      total += valor;
+      const contaNoTotal = ev.status === 'confirmado' || ev.status === 'concluido';
+      if(contaNoTotal) total += valor;
 
       const tr = document.createElement('tr');
+      if(!contaNoTotal) tr.style.opacity = '.55';
       tr.innerHTML = `
         <td>${ev.nome}</td>
         <td>${ev.cliente || 'Sem cliente'}</td>
         <td>${ev.data ? formatDate(ev.data) : '-'}</td>
         <td>${ev.local || '-'}</td>
+        <td><span class="status-badge ${ev.status || 'orcamento'}">${statusLabel[ev.status] || 'Orçamento'}</span></td>
         <td><strong>${formatCurrency(valor) || 'R$ 0,00'}</strong></td>
       `;
       tbody.appendChild(tr);
@@ -838,20 +932,35 @@ function renderFinanceiro(){
   totalEl.textContent = total.toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
 }
 
+document.querySelectorAll('#filtro-tipos button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('#filtro-tipos button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    filtroTipoAtual = btn.dataset.tipo;
+    renderEventos();
+  });
+});
+
 document.getElementById('btn-add-evento').addEventListener('click', async ()=>{
   const nome = document.getElementById('ev-nome').value.trim();
   const cliente = document.getElementById('ev-cliente').value.trim();
   const data = document.getElementById('ev-data').value;
   const local = document.getElementById('ev-local').value.trim();
   const valor = numericEventValue(document.getElementById('ev-valor').value);
+  const status = document.getElementById('ev-status').value;
+  const tipo = document.getElementById('ev-tipo').value;
+  const estiloMusical = document.getElementById('ev-estilo').value.trim();
   if(!nome){ toast('Digite o nome do evento'); return; }
-  eventos.push({id:uid(), nome, cliente, data, local, valor, itens:{}});
+  eventos.push({id:uid(), nome, cliente, data, local, valor, status, tipo, estiloMusical, itens:{}});
   await saveEventos();
   document.getElementById('ev-nome').value='';
   document.getElementById('ev-cliente').value='';
   document.getElementById('ev-data').value='';
   document.getElementById('ev-local').value='';
   document.getElementById('ev-valor').value='';
+  document.getElementById('ev-status').value='orcamento';
+  document.getElementById('ev-tipo').value='casamento';
+  document.getElementById('ev-estilo').value='';
   renderEventos();
   renderSelectEventos();
   renderFinanceiro();
@@ -889,7 +998,7 @@ function renderMontagemItens(eventoId){
   card.style.display = 'block';
   document.getElementById('print-evento-nome').textContent = ev.nome;
   document.getElementById('print-evento-info').textContent =
-    [ev.cliente ? 'Contratante: '+ev.cliente : '', ev.data ? 'Data: '+formatDate(ev.data) : '', ev.local ? 'Local: '+ev.local : '']
+    [tipoLabel[ev.tipo] ? 'Tipo: '+tipoLabel[ev.tipo] : '', ev.cliente ? 'Contratante: '+ev.cliente : '', ev.data ? 'Data: '+formatDate(ev.data) : '', ev.local ? 'Local: '+ev.local : '', ev.estiloMusical ? 'Estilo musical: '+ev.estiloMusical : '']
     .filter(Boolean).join('   ·   ');
 
   document.getElementById('print-evento-valor').textContent =
@@ -1055,7 +1164,7 @@ document.getElementById('btn-migrar').addEventListener('click', async ()=>{
     const user=await getUser();
     if(!user) throw new Error('Faça login primeiro.');
     estoque=localEstoque;
-    eventos=localEventos.map(ev=>({...ev,valor:numericEventValue(ev.valor),itens:ev.itens||{}}));
+    eventos=localEventos.map(ev=>({...ev,valor:numericEventValue(ev.valor),status:ev.status||'orcamento',tipo:ev.tipo||'outro',estiloMusical:ev.estiloMusical||'',itens:ev.itens||{}}));
     await saveEstoque();
     await saveEventos();
     renderEstoque(); renderEventos(); renderSelectEventos(); renderFinanceiro();
@@ -1101,7 +1210,7 @@ document.getElementById('input-restaurar').addEventListener('change', (e)=>{
       const confirmar = confirm('Isso vai substituir os dados atuais pelos dados do backup. Continuar?');
       if(!confirmar) return;
       estoque = dados.estoque || [];
-      eventos = (dados.eventos || []).map(ev=>({...ev,valor:numericEventValue(ev.valor),itens:ev.itens||{}}));
+      eventos = (dados.eventos || []).map(ev=>({...ev,valor:numericEventValue(ev.valor),status:ev.status||'orcamento',tipo:ev.tipo||'outro',estiloMusical:ev.estiloMusical||'',itens:ev.itens||{}}));
       const user=await getUser();
       if(!user) throw new Error('Faça login primeiro.');
       const {error:e1}=await supabaseClient.from('estoque').delete().neq('id','__none__');
