@@ -329,7 +329,7 @@
 <div class="auth-screen" id="auth-screen">
   <img class="auth-logo app-logo" alt="Elite Eventos">
   <div class="auth-card">
-    <h2>Checklist de Eventos</h2>
+    <h2>Elite Eventos - Gestão de Equipamentos</h2>
     <p>Acesse sua conta para manter estoque, eventos e financeiro sincronizados na nuvem em qualquer aparelho.</p>
     <div class="field" id="campo-username">
       <label for="auth-username">Nome de usuário <span style="font-weight:400;color:var(--muted);">(só para criar conta)</span></label>
@@ -367,7 +367,7 @@
   <div class="header-text">
     <h1>Elite Eventos - Gestão de Equipamentos</h1>
     <p>Cadastre os equipamentos de som e iluminação e monte a lista de cada evento.</p>
-    <p>By JPdev.</p>
+    <p>Criado por GhostDeV.</p>
   </div>
 </header>
 
@@ -515,6 +515,7 @@
       <div class="print-header">
         <h1 id="print-evento-nome"></h1>
         <div id="print-evento-info"></div>
+        <div id="print-evento-estilo" style="font-weight:600;margin-top:6px;"></div>
         <div id="print-evento-valor" style="font-weight:600;margin-top:6px;"></div>
       </div>
       <h2 class="no-print">Itens do evento</h2>
@@ -999,8 +1000,11 @@ function renderMontagemItens(eventoId){
   card.style.display = 'block';
   document.getElementById('print-evento-nome').textContent = ev.nome;
   document.getElementById('print-evento-info').textContent =
-    [tipoLabel[ev.tipo] ? 'Tipo: '+tipoLabel[ev.tipo] : '', ev.cliente ? 'Contratante: '+ev.cliente : '', ev.data ? 'Data: '+formatDate(ev.data) : '', ev.local ? 'Local: '+ev.local : '', ev.estiloMusical ? 'Estilo musical: '+ev.estiloMusical : '']
+    [tipoLabel[ev.tipo] ? 'Tipo: '+tipoLabel[ev.tipo] : '', ev.cliente ? 'Contratante: '+ev.cliente : '', ev.data ? 'Data: '+formatDate(ev.data) : '', ev.local ? 'Local: '+ev.local : '']
     .filter(Boolean).join('   ·   ');
+
+  document.getElementById('print-evento-estilo').textContent =
+    ev.estiloMusical ? '🎵 Estilo musical: ' + ev.estiloMusical : '';
 
   document.getElementById('print-evento-valor').textContent =
     'Valor do evento: ' + (formatCurrency(ev.valor) || 'R$ 0,00');
