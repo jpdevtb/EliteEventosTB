@@ -1,0 +1,16 @@
+{
+  "name": "Elite Eventos - Checklist de Equipamentos",
+  "short_name": "Elite Eventos",
+  "description": "Estoque, eventos, montagem de checklist e financeiro da Elite Eventos.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#05070a",
+  "theme_color": "#0a2540",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
